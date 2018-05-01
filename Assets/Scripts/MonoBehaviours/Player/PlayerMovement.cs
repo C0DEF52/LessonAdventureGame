@@ -28,6 +28,7 @@ public class PlayerMovement : MonoBehaviour
     private void Start ()
     {
         agent.updateRotation = false;
+        agent.isStopped = true;
 
         inputHoldWait = new WaitForSeconds( inputHoldDelay );
 
@@ -36,8 +37,17 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnAnimatorMove ()
     {
-        agent.velocity = animator.deltaPosition / Time.deltaTime;
+        agent.velocity = animator.velocity;
     }
+
+    /*private void OnDrawGizmos ()
+    {
+        if( agent.desiredVelocity != Vector3.zero )
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine( transform.position, transform.position + agent.desiredVelocity );
+        }
+    }*/
 
     private void Update ()
     {
@@ -48,7 +58,7 @@ public class PlayerMovement : MonoBehaviour
         if( agent.remainingDistance <= agent.stoppingDistance * stopDistanceProportion )
             Stopping( out speed );
         else if( agent.remainingDistance <= agent.stoppingDistance )
-            Slowing( out speed, agent.remainingDistance );
+            Slowing( out speed );
         else if( speed > turnSpeedThreshold )
             Moving();
 
@@ -70,17 +80,23 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    private void Slowing ( out float speed, float distanceToDestination )
+    private void Slowing ( out float speed )
     {
         agent.isStopped = true;
         transform.position = Vector3.MoveTowards( transform.position, destinationPosition, slowingSpeed * Time.deltaTime );
-        float proportionalDistance = 1f - distanceToDestination / agent.stoppingDistance;
+        float proportionalDistance = 1f - agent.remainingDistance / agent.stoppingDistance;
         speed = Mathf.Lerp( slowingSpeed, 0f, proportionalDistance );
 
-        var targetRotation = currentInteractable
-            ? currentInteractable.interactionLocation.rotation
-            : transform.rotation;
-        transform.rotation = Quaternion.Lerp( transform.rotation, targetRotation, proportionalDistance );
+        if( currentInteractable )
+        {
+            transform.rotation = Quaternion.Lerp(
+                transform.rotation, currentInteractable.interactionLocation.rotation, proportionalDistance );
+        }
+
+        //var targetRotation = currentInteractable
+        //    ? currentInteractable.interactionLocation.rotation
+        //    : transform.rotation;
+        //transform.rotation = Quaternion.Lerp( transform.rotation, targetRotation, proportionalDistance );
     }
 
     private void Moving ()
