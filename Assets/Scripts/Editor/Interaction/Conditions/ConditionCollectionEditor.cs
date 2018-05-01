@@ -1,13 +1,11 @@
 ﻿using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(ConditionCollection))]
 public class ConditionCollectionEditor : EditorWithSubEditors<ConditionEditor, Condition>
 {
     public SerializedProperty collectionsProperty;
 
 
-    private ConditionCollection conditionCollection;
     private SerializedProperty descriptionProperty;
     private SerializedProperty conditionsProperty;
     private SerializedProperty reactionCollectionProperty;
@@ -22,8 +20,6 @@ public class ConditionCollectionEditor : EditorWithSubEditors<ConditionEditor, C
 
     private void OnEnable ()
     {
-        conditionCollection = (ConditionCollection)target;
-
         if (target == null)
         {
             DestroyImmediate (this);
@@ -33,8 +29,6 @@ public class ConditionCollectionEditor : EditorWithSubEditors<ConditionEditor, C
         descriptionProperty = serializedObject.FindProperty(conditionCollectionPropDescriptionName);
         conditionsProperty = serializedObject.FindProperty(conditionCollectionPropRequiredConditionsName);
         reactionCollectionProperty = serializedObject.FindProperty(conditionCollectionPropReactionCollectionName);
-
-        CheckAndCreateSubEditors (conditionCollection.requiredConditions);
     }
 
 
@@ -53,33 +47,7 @@ public class ConditionCollectionEditor : EditorWithSubEditors<ConditionEditor, C
 
     public override void OnInspectorGUI ()
     {
-        serializedObject.Update ();
-
-        CheckAndCreateSubEditors(conditionCollection.requiredConditions);
         
-        EditorGUILayout.BeginVertical(GUI.skin.box);
-        EditorGUI.indentLevel++;
-
-        EditorGUILayout.BeginHorizontal();
-
-        descriptionProperty.isExpanded = EditorGUILayout.Foldout(descriptionProperty.isExpanded, descriptionProperty.stringValue);
-
-        if (GUILayout.Button("Remove Collection", GUILayout.Width(collectionButtonWidth)))
-        {
-            collectionsProperty.RemoveFromObjectArray (conditionCollection);
-        }
-
-        EditorGUILayout.EndHorizontal();
-        
-        if (descriptionProperty.isExpanded)
-        {
-            ExpandedGUI ();
-        }
-        
-        EditorGUI.indentLevel--;
-        EditorGUILayout.EndVertical();
-
-        serializedObject.ApplyModifiedProperties();
     }
 
 
@@ -124,9 +92,6 @@ public class ConditionCollectionEditor : EditorWithSubEditors<ConditionEditor, C
     public static ConditionCollection CreateConditionCollection()
     {
         ConditionCollection newConditionCollection = CreateInstance<ConditionCollection>();
-        newConditionCollection.description = "New condition collection";
-        newConditionCollection.requiredConditions = new Condition[1];
-        newConditionCollection.requiredConditions[0] = ConditionEditor.CreateCondition();
         return newConditionCollection;
     }
 }

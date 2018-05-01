@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.EventSystems;
@@ -8,139 +7,145 @@ public class PlayerMovement : MonoBehaviour
 {
     public Animator animator;
     public NavMeshAgent agent;
-    public float inputHoldDelay = 0.5f;
-    public float turnSpeedThreshold = 0.5f;
+    public SaveData playerSaveData;
+    public float turnSmoothing = 15f;
     public float speedDampTime = 0.1f;
     public float slowingSpeed = 0.175f;
-    public float turnSmoothing = 15f;
+    public float turnSpeedThreshold = 0.5f;
+    public float inputHoldDelay = 0.5f;
+    
 
-    private WaitForSeconds inputHoldWait;
-    private Vector3 destinationPosition;
     private Interactable currentInteractable;
+    private Vector3 destinationPosition;
     private bool handleInput = true;
+    private WaitForSeconds inputHoldWait;
+
+
+    private readonly int hashSpeedPara = Animator.StringToHash("Speed");
+    private readonly int hashLocomotionTag = Animator.StringToHash("Locomotion");
+
+
+    public const string startingPositionKey = "starting position";
+
 
     private const float stopDistanceProportion = 0.1f;
     private const float navMeshSampleDistance = 4f;
 
-    private readonly int hashSpeedPara = Animator.StringToHash( "Speed" );
-    private readonly int hashLocomotionTag = Animator.StringToHash( "Locomotion" );
 
-    public const string startingPositionKey = "starting position";
-
-    private void Start ()
+    private void Start()
     {
         agent.updateRotation = false;
-        agent.isStopped = true;
 
-        inputHoldWait = new WaitForSeconds( inputHoldDelay );
+        inputHoldWait = new WaitForSeconds (inputHoldDelay);
+
+        string startingPositionName = "";
+        playerSaveData.Load(startingPositionKey, ref startingPositionName);
+        Transform startingPosition = StartingPosition.FindStartingPosition(startingPositionName);
+
+        transform.position = startingPosition.position;
+        transform.rotation = startingPosition.rotation;
 
         destinationPosition = transform.position;
     }
 
-    private void OnAnimatorMove ()
+
+    private void OnAnimatorMove()
     {
-        agent.velocity = animator.velocity;
+        agent.velocity = animator.deltaPosition / Time.deltaTime;
     }
 
-    /*private void OnDrawGizmos ()
-    {
-        if( agent.desiredVelocity != Vector3.zero )
-        {
-            Gizmos.color = Color.red;
-            Gizmos.DrawLine( transform.position, transform.position + agent.desiredVelocity );
-        }
-    }*/
 
-    private void Update ()
+    private void Update()
     {
-        if( agent.pathPending )
+        if (agent.pathPending)
             return;
 
-        var speed = agent.desiredVelocity.magnitude;
-        if( agent.remainingDistance <= agent.stoppingDistance * stopDistanceProportion )
-            Stopping( out speed );
-        else if( agent.remainingDistance <= agent.stoppingDistance )
-            Slowing( out speed );
-        else if( speed > turnSpeedThreshold )
-            Moving();
-
-        animator.SetFloat( hashSpeedPara, speed, speedDampTime, Time.deltaTime );
+        float speed = agent.desiredVelocity.magnitude;
+        
+        if (agent.remainingDistance <= agent.stoppingDistance * stopDistanceProportion)
+            Stopping (out speed);
+        else if (agent.remainingDistance <= agent.stoppingDistance)
+            Slowing(out speed, agent.remainingDistance);
+        else if (speed > turnSpeedThreshold)
+            Moving ();
+        
+        animator.SetFloat(hashSpeedPara, speed, speedDampTime, Time.deltaTime);
     }
 
-    private void Stopping ( out float speed )
+
+    private void Stopping (out float speed)
     {
-        agent.isStopped = true;
+        agent.Stop();
+
         transform.position = destinationPosition;
         speed = 0f;
 
-        if( currentInteractable )
+        if (currentInteractable)
         {
             transform.rotation = currentInteractable.interactionLocation.rotation;
             currentInteractable.Interact();
             currentInteractable = null;
-            StartCoroutine( WaitForInteraction() );
+
+            StartCoroutine (WaitForInteraction ());
         }
     }
 
-    private void Slowing ( out float speed )
+
+    private void Slowing (out float speed, float distanceToDestination)
     {
-        agent.isStopped = true;
-        transform.position = Vector3.MoveTowards( transform.position, destinationPosition, slowingSpeed * Time.deltaTime );
-        float proportionalDistance = 1f - agent.remainingDistance / agent.stoppingDistance;
-        speed = Mathf.Lerp( slowingSpeed, 0f, proportionalDistance );
+        agent.Stop();
 
-        if( currentInteractable )
-        {
-            transform.rotation = Quaternion.Lerp(
-                transform.rotation, currentInteractable.interactionLocation.rotation, proportionalDistance );
-        }
+        float proportionalDistance = 1f - distanceToDestination / agent.stoppingDistance;
 
-        //var targetRotation = currentInteractable
-        //    ? currentInteractable.interactionLocation.rotation
-        //    : transform.rotation;
-        //transform.rotation = Quaternion.Lerp( transform.rotation, targetRotation, proportionalDistance );
+        Quaternion targetRotation = currentInteractable ? currentInteractable.interactionLocation.rotation : transform.rotation;
+        transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, proportionalDistance);
+
+        transform.position = Vector3.MoveTowards(transform.position, destinationPosition, slowingSpeed * Time.deltaTime);
+
+        speed = Mathf.Lerp(slowingSpeed, 0f, proportionalDistance);
     }
+
 
     private void Moving ()
     {
-        var targetRotation = Quaternion.LookRotation( agent.desiredVelocity );
-        transform.rotation = Quaternion.Lerp( transform.rotation, targetRotation, turnSmoothing * Time.deltaTime );
+        Quaternion targetRotation = Quaternion.LookRotation(agent.desiredVelocity);
+        transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, turnSmoothing * Time.deltaTime);
     }
 
-    public void OnGroundClick ( BaseEventData data )
-    {
-        if( !handleInput )
-            return;
 
+    public void OnGroundClick(BaseEventData data)
+    {
+        if(!handleInput)
+            return;
+        
         currentInteractable = null;
 
-        var pData = ( PointerEventData )data;
-        NavMeshHit hit;
-        if( NavMesh.SamplePosition(
-            pData.pointerCurrentRaycast.worldPosition, out hit, navMeshSampleDistance, NavMesh.AllAreas ) )
-        {
-            destinationPosition = hit.position;
-        }
-        else
-        {
-            destinationPosition = pData.pointerCurrentRaycast.worldPosition;
-        }
+        PointerEventData pData = (PointerEventData)data;
 
-        agent.SetDestination( destinationPosition );
-        agent.isStopped = false;
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition (pData.pointerCurrentRaycast.worldPosition, out hit, navMeshSampleDistance, NavMesh.AllAreas))
+            destinationPosition = hit.position;
+        else
+            destinationPosition = pData.pointerCurrentRaycast.worldPosition;
+
+        agent.SetDestination(destinationPosition);
+        agent.Resume ();
     }
 
-    public void OnInteractableClick ( Interactable interactable )
+
+    public void OnInteractableClick(Interactable interactable)
     {
-        if( !handleInput )
+        if(!handleInput)
             return;
 
         currentInteractable = interactable;
+
         destinationPosition = currentInteractable.interactionLocation.position;
 
-        agent.SetDestination( destinationPosition );
-        agent.isStopped = false;
+        agent.SetDestination(destinationPosition);
+        agent.Resume ();
     }
+
 
     private IEnumerator WaitForInteraction ()
     {
@@ -148,7 +153,7 @@ public class PlayerMovement : MonoBehaviour
 
         yield return inputHoldWait;
 
-        while( animator.GetCurrentAnimatorStateInfo(0).tagHash != hashLocomotionTag )
+        while (animator.GetCurrentAnimatorStateInfo (0).tagHash != hashLocomotionTag)
         {
             yield return null;
         }
