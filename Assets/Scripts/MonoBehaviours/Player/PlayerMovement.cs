@@ -25,6 +25,8 @@ public class PlayerMovement : MonoBehaviour
     private readonly int hashSpeedPara = Animator.StringToHash( "Speed" );
     private readonly int hashLocomotionTag = Animator.StringToHash( "Locomotion" );
 
+    public const string startingPositionKey = "starting position";
+
     private void Start ()
     {
         agent.updateRotation = false;
