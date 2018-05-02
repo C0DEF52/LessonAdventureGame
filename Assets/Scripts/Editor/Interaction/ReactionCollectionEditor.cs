@@ -150,22 +150,7 @@ public class ReactionCollectionEditor : EditorWithSubEditors<ReactionEditor, Rea
 
     private static bool IsDragValid ()
     {
-        for (int i = 0; i < DragAndDrop.objectReferences.Length; i++)
-        {
-            if (DragAndDrop.objectReferences[i].GetType () != typeof (MonoScript))
-                return false;
-            
-            MonoScript script = DragAndDrop.objectReferences[i] as MonoScript;
-            Type scriptType = script.GetClass ();
-
-            if (!scriptType.IsSubclassOf (typeof(Reaction)))
-                return false;
-
-            if (scriptType.IsAbstract)
-                return false;
-        }
-
-        return true;
+        return false;
     }
 
 
