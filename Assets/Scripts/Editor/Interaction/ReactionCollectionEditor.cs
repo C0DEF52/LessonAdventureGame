@@ -63,7 +63,8 @@ public class ReactionCollectionEditor : EditorWithSubEditors<ReactionEditor, Rea
             EditorGUILayout.Space ();
         }
 
-        Rect fullWidthRect = GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none, GUILayout.Height(dropAreaHeight + verticalSpacing));
+        Rect fullWidthRect =
+            GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none, GUILayout.Height(dropAreaHeight + verticalSpacing));
 
         Rect leftAreaRect = fullWidthRect;
         leftAreaRect.y += verticalSpacing * 0.5f;
@@ -87,7 +88,7 @@ public class ReactionCollectionEditor : EditorWithSubEditors<ReactionEditor, Rea
     {
         Rect topHalf = containingRect;
         topHalf.height *= 0.5f;
-        
+
         Rect bottomHalf = topHalf;
         bottomHalf.y += bottomHalf.height;
 
@@ -128,9 +129,9 @@ public class ReactionCollectionEditor : EditorWithSubEditors<ReactionEditor, Rea
 
                 break;
             case EventType.DragPerform:
-                
+
                 DragAndDrop.AcceptDrag();
-                
+
                 for (int i = 0; i < DragAndDrop.objectReferences.Length; i++)
                 {
                     MonoScript script = DragAndDrop.objectReferences[i] as MonoScript;
@@ -150,7 +151,22 @@ public class ReactionCollectionEditor : EditorWithSubEditors<ReactionEditor, Rea
 
     private static bool IsDragValid ()
     {
-        return false;
+        for( int i = 0; i < DragAndDrop.objectReferences.Length; i++ )
+        {
+            if( DragAndDrop.objectReferences[i].GetType() != typeof( MonoScript ) )
+                return false;
+
+            MonoScript script = DragAndDrop.objectReferences[i] as MonoScript;
+            Type scriptType = script.GetClass();
+
+            if( !scriptType.IsSubclassOf( typeof( Reaction ) ) )
+                return false;
+
+            if( scriptType.IsAbstract )
+                return false;
+        }
+
+        return true;
     }
 
 
