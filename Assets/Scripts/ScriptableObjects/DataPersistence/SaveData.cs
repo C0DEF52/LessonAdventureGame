@@ -21,30 +21,12 @@ public class SaveData : ResettableScriptableObject
 
         public void TrySetValue (string key, T value)
         {
-            int index = keys.FindIndex(x => x == key);
-
-            if (index > -1)
-            {
-                values[index] = value;
-            }
-            else
-            {
-                keys.Add (key);
-                values.Add (value);
-            }
+            
         }
 
 
         public bool TryGetValue (string key, ref T value)
         {
-            int index = keys.FindIndex(x => x == key);
-
-            if (index > -1)
-            {
-                value = values[index];
-                return true;
-            }
-
             return false;
         }
     }
