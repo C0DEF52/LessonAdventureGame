@@ -5,6 +5,8 @@ using UnityEngine.EventSystems;
 
 public class PlayerMovement : MonoBehaviour
 {
+    public GameObject eventSystemPrefab;
+
     public Animator animator;
     public NavMeshAgent agent;
     public SaveData playerSaveData;
@@ -13,7 +15,7 @@ public class PlayerMovement : MonoBehaviour
     public float slowingSpeed = 0.175f;
     public float turnSpeedThreshold = 0.5f;
     public float inputHoldDelay = 0.5f;
-    
+
 
     private Interactable currentInteractable;
     private Vector3 destinationPosition;
@@ -34,6 +36,9 @@ public class PlayerMovement : MonoBehaviour
 
     private void Start()
     {
+        if (UnityEngine.EventSystems.EventSystem.current == null)
+            Instantiate(eventSystemPrefab);
+
         agent.updateRotation = false;
 
         inputHoldWait = new WaitForSeconds (inputHoldDelay);
@@ -42,8 +47,11 @@ public class PlayerMovement : MonoBehaviour
         playerSaveData.Load(startingPositionKey, ref startingPositionName);
         Transform startingPosition = StartingPosition.FindStartingPosition(startingPositionName);
 
-        transform.position = startingPosition.position;
-        transform.rotation = startingPosition.rotation;
+        if (startingPosition)
+        {
+            transform.position = startingPosition.position;
+            transform.rotation = startingPosition.rotation;
+        }
 
         destinationPosition = transform.position;
     }
@@ -61,14 +69,14 @@ public class PlayerMovement : MonoBehaviour
             return;
 
         float speed = agent.desiredVelocity.magnitude;
-        
+
         if (agent.remainingDistance <= agent.stoppingDistance * stopDistanceProportion)
             Stopping (out speed);
         else if (agent.remainingDistance <= agent.stoppingDistance)
             Slowing(out speed, agent.remainingDistance);
         else if (speed > turnSpeedThreshold)
             Moving ();
-        
+
         animator.SetFloat(hashSpeedPara, speed, speedDampTime, Time.deltaTime);
     }
 
@@ -117,7 +125,7 @@ public class PlayerMovement : MonoBehaviour
     {
         if(!handleInput)
             return;
-        
+
         currentInteractable = null;
 
         PointerEventData pData = (PointerEventData)data;
